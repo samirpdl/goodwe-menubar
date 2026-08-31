@@ -1,0 +1,23 @@
+{
+  "host": "192.168.1.50",
+  "port": 8899,
+  "family": null,
+  "comm_addr": 0,
+  "timeout": 1,
+  "retries": 3,
+  "poll_interval": 10,
+  "units": "kW",
+  "flip_meter_sign": false,
+  "wake_enabled": true,
+  "wake_port": 48899,
+  "wake_payload": "WIFIKIT-214028-READ",
+  "currency_symbol": "A$",
+  "supply_charge": 1.3684,
+  "export_rate": 0.10,
+  "import_tariff": [
+    { "from": "00:00", "to": "06:00", "rate": 0.1365 },
+    { "from": "06:00", "to": "15:00", "rate": 0.2365 },
+    { "from": "15:00", "to": "21:00", "rate": 0.40392 },
+    { "from": "21:00", "to": "24:00", "rate": 0.2365 }
+  ]
+}
