@@ -73,8 +73,8 @@ RETRY_PAUSE = 3      # seconds before one retry of a dropped BLE link
 # there is no reason to wake the car up and ask.
 START_W = MIN_AMPS * VOLTS + BUFFER_W
 
-# Arming starts looking for sun immediately; the automation switches itself off
-# at WINDOW_END rather than running into the evening.
+# Arming starts looking for sun immediately. After WINDOW_END it keeps going
+# while there's sun (or a charge underway) and switches off once the sun is gone.
 WINDOW_END = 15
 # Armed, in-window, but no usable surplus for this long: done for the day.
 GIVE_UP_AFTER = 3600
@@ -257,8 +257,9 @@ class SolarCharger:
             self._sample_at = sample_at
         hour = _local_hour()
 
-        # Past the window: shut down for the day, stopping any charge we began.
-        if hour >= WINDOW_END:
+        # Past the window and the sun's gone: shut down for the day, stopping
+        # any charge we began. While there's still surplus or a charge, carry on.
+        if hour >= WINDOW_END and not self._charging and meter_w < START_W:
             if self.armed:
                 self.disarm(f"done for today (after {WINDOW_END}:00)")
             elif self.status != f"done for today (after {WINDOW_END}:00)":

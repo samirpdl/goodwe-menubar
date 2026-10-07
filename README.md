@@ -309,14 +309,14 @@ Once armed:
 |---|---|
 | Immediately | the control loop runs as described below, whatever the hour |
 | No usable sun for a solid hour | switches itself off for the day — `gave up — no sun for an hour` |
-| 15:00 | switches itself off and **stops any charge it started** |
+| After 15:00 | keeps going while there's sun; once the sun is gone (no surplus, not charging) it switches itself off and **stops any charge it started** |
 
 Arming is deliberately not remembered across restarts or days: a new day is a
 new decision. Click **Stop solar charging** to disarm early; that also stops a
 charge in progress, since leaving the car pulling the current we last set would
 have it charging off the grid after sunset.
 
-The cut-off and the give-up timer are `WINDOW_END` and `GIVE_UP_AFTER` at the top of `goodwe_menubar/tesla.py`.
+The 15:00 mark and the give-up timer are `WINDOW_END` and `GIVE_UP_AFTER` at the top of `goodwe_menubar/tesla.py`.
 
 **It won't charge a full car.** If the battery is already at the charge limit
 set in the Tesla app, it reports `at charge limit` and backs off to a half-hourly

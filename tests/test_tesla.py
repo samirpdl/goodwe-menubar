@@ -209,6 +209,7 @@ def test():
     tesla.RETRY_PAUSE = real_pause
 
     real_hour = _local_hour
+    tesla._local_hour = lambda: 12          # don't depend on the wall clock
     c = SolarCharger()
     c.enabled = True
     c._decide = lambda *a: (_ for _ in ()).throw(AssertionError("touched the car"))
@@ -322,11 +323,13 @@ def test():
     c.tick(200)
     assert not c.armed and "gave up" in c.status, c.status
 
-    # Past the window it switches itself off rather than running into the dark.
+    # Past the window it keeps going while there's sun, then switches off.
     c.arm()
     tesla._local_hour = lambda: 15
     c._next = 0
     c.tick(5000)
+    assert c.armed, c.status
+    c.tick(0)
     assert not c.armed and "done for today" in c.status, c.status
     tesla._local_hour = real_hour
 
