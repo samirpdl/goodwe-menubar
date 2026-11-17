@@ -128,6 +128,16 @@ def test():
     sc._decide(room(1))
     assert len(sc_reads) == 3, sc_reads
 
+    # Car finished on its own at a solar-low setting: reset to full, once.
+    sc._read = lambda *cmd: ('{"chargingState":{"Complete":{}},"chargeCurrentRequest":9}')
+    sc._state_at = 0.0
+    sc_sent.clear()
+    sc._decide(room(0))
+    assert sc.status == "charged" and sc_sent == [("charging-set-amps 15",)], sc_sent
+    sc._read = lambda *cmd: ('{"chargingState":{"Complete":{}},"chargeCurrentRequest":15}')
+    sc._decide(room(0))
+    assert len(sc_sent) == 1, sc_sent
+
     # An unreachable car still backs off instead of retrying every tick.
     sc._read = lambda *cmd: None
     sc._state_at = 0.0
@@ -281,7 +291,7 @@ def test():
     c.tick(-400)
     while c._busy:
         time.sleep(0.01)
-    assert stopped == ["charging-stop"], stopped
+    assert stopped == ["charging-stop", "charging-set-amps 15"], stopped
     assert not c._charging and c.amps == 0 and c.status == "stopped (importing)"
 
     # Charging and importing hard: don't wait out the interval.

@@ -68,6 +68,9 @@ CONNECT_TIMEOUT = "30s"  # -connect-timeout: BLE link-up, default 20s is thin
 BLE_TIMEOUT = 75       # our own backstop; tesla-control's own timeouts (connect
                        # + command, above) should fire first and say why
 RETRY_PAUSE = 3      # seconds before one retry of a dropped BLE link
+# Every stop we issue also puts the current back to full, so a scheduled or
+# manual overnight charge isn't left crawling at our last solar setting.
+STOP = ("charging-stop", f"charging-set-amps {MAX_AMPS}")
 
 # Below this there isn't enough sun to charge at even the minimum current, so
 # there is no reason to wake the car up and ask.
@@ -149,6 +152,8 @@ def parse_charge_state(blob: str) -> dict:
         "charging": '"Charging"' in blob or '"Starting"' in blob,
         "complete": '"Complete"' in blob,
         "amps": _int(blob, "charger_actual_current"),
+        # What the car is set to draw, as opposed to what it's drawing now.
+        "request": _int(blob, "charge_current_request"),
         # Never let the car's idea of its limit exceed the breaker's.
         "max_amps": min(car_max, MAX_AMPS) if car_max else MAX_AMPS,
         "volts": volts if 90 < volts < 300 else VOLTS,
@@ -229,7 +234,7 @@ class SolarCharger:
 
     def _stop_bg(self) -> None:
         try:
-            self._send("charging-stop")
+            self._send(*STOP)
         except Exception as exc:
             _log(f"stop failed: {exc}")
         finally:
@@ -366,6 +371,10 @@ class SolarCharger:
         if not car["connected"] or car["complete"] or car["at_limit"]:
             self._sun = 0
             self._next = time.time() + IDLE_RECHECK
+            # Finished or unplugged on its own, possibly still at a low solar
+            # setting: put it back to full for the overnight charge.
+            if 0 < car["request"] < MAX_AMPS and self._send(STOP[1]):
+                car["request"] = MAX_AMPS
             if not car["connected"]:
                 self.status = "unplugged"
             elif car["at_limit"]:
@@ -380,7 +389,7 @@ class SolarCharger:
             # Below the floor there is no point trickling: stop rather than
             # hold the car at a current the surplus can't cover.
             if car["charging"]:
-                if not self._send("charging-stop"):
+                if not self._send(*STOP):
                     self._state_at = 0.0     # we no longer know where it is
                 car["charging"] = False
                 car["amps"] = 0
